@@ -1,0 +1,145 @@
+{
+  "info": {
+    "name": "Kraya-AI WhatsApp API",
+    "description": "Complete WhatsApp API integration for Kraya-AI platform",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:4000/api",
+      "type": "string"
+    },
+    {
+      "key": "tenantId",
+      "value": "demo-tenant",
+      "type": "string"
+    },
+    {
+      "key": "authToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "whatsappNumber",
+      "value": "+1234567890",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Messaging & Contacts",
+      "item": [
+        {
+          "name": "Get Messages",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/{{tenantId}}/whatsapp/getMessages/{{whatsappNumber}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{tenantId}}", "whatsapp", "getMessages", "{{whatsappNumber}}"]
+            }
+          }
+        },
+        {
+          "name": "Get Message Templates",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/{{tenantId}}/whatsapp/getMessageTemplates",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{tenantId}}", "whatsapp", "getMessageTemplates"]
+            }
+          }
+        },
+        {
+          "name": "Get Contacts",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/{{tenantId}}/whatsapp/getContacts",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{tenantId}}", "whatsapp", "getContacts"]
+            }
+          }
+        },
+        {
+          "name": "Get Media",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/{{tenantId}}/whatsapp/getMedia?mediaId=test123",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{tenantId}}", "whatsapp", "getMedia"],
+              "query": [
+                {
+                  "key": "mediaId",
+                  "value": "test123"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Add Contact",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+       
