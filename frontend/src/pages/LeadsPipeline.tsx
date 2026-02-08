@@ -9,14 +9,16 @@ export default function LeadsPipeline() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const { data: leads, isLoading: leadsLoading } = useQuery({
+  const { data: response, isLoading: leadsLoading } = useQuery({
     queryKey: ['leads'],
     queryFn: async () => {
-      const response = await api.get('/leads');
-      const data = response.data.data;
-      return (data.items || data) as Lead[];
+      const res = await api.get('/leads');
+      return res.data.data;
     },
   });
+
+  // Backend returns { leads, pagination }
+  const leads = response?.leads ?? response?.items ?? (Array.isArray(response) ? response : []);
 
   // Group leads by status (using status as stage for now)
   const stages = [

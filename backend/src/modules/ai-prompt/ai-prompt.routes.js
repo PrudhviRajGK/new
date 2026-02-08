@@ -1,6 +1,6 @@
 const express = require('express');
 const { checkPermission } = require('../../shared/middleware/auth.middleware');
-const AIPrompt = require('../../database/models/ai-prompt.model');
+const { AIPrompt, Tenant } = require('../../database/models');
 
 const router = express.Router({ mergeParams: true });
 
@@ -9,7 +9,6 @@ router.get('/',
   checkPermission('ai-prompts', 'view'),
   async (req, res, next) => {
     try {
-      const { Tenant } = require('../../database/models');
       const tenant = await Tenant.findOne({ where: { tenant_id: req.params.tenantId } });
       
       if (!tenant) {
@@ -33,7 +32,6 @@ router.get('/:id',
   checkPermission('ai-prompts', 'view'),
   async (req, res, next) => {
     try {
-      const { Tenant } = require('../../database/models');
       const tenant = await Tenant.findOne({ where: { tenant_id: req.params.tenantId } });
       
       if (!tenant) {
@@ -63,7 +61,6 @@ router.post('/',
   checkPermission('ai-prompts', 'create'),
   async (req, res, next) => {
     try {
-      const { Tenant } = require('../../database/models');
       const tenant = await Tenant.findOne({ where: { tenant_id: req.params.tenantId } });
       
       if (!tenant) {
@@ -79,11 +76,17 @@ router.post('/',
         });
       }
 
+      // Map frontend types to backend enum (qualification, response, summary, scoring, intent_detection)
+      const typeMap = { summarization: 'summary', response_generation: 'response' };
+      const mappedType = typeMap[prompt_type] || prompt_type;
+
       const prompt = await AIPrompt.create({
         tenant_id: tenant.id,
-        prompt_type,
-        prompt_text,
-        context,
+        name: `${prompt_type} - ${new Date().toISOString().slice(0, 10)}`,
+        type: mappedType,
+        prompt_template: prompt_text,
+        system_message: prompt_text,
+        metadata: context ? { context } : {},
         is_active: is_active !== undefined ? is_active : true
       });
 
@@ -99,7 +102,6 @@ router.put('/:id',
   checkPermission('ai-prompts', 'update'),
   async (req, res, next) => {
     try {
-      const { Tenant } = require('../../database/models');
       const tenant = await Tenant.findOne({ where: { tenant_id: req.params.tenantId } });
       
       if (!tenant) {
@@ -119,10 +121,12 @@ router.put('/:id',
 
       const { prompt_type, prompt_text, context, is_active } = req.body;
 
+      const typeMap = { summarization: 'summary', response_generation: 'response' };
+      const mappedType = prompt_type ? (typeMap[prompt_type] || prompt_type) : null;
+
       await prompt.update({
-        ...(prompt_type && { prompt_type }),
-        ...(prompt_text && { prompt_text }),
-        ...(context !== undefined && { context }),
+        ...(mappedType && { type: mappedType }),
+        ...(prompt_text && { prompt_template: prompt_text, system_message: prompt_text }),
         ...(is_active !== undefined && { is_active })
       });
 
@@ -138,7 +142,6 @@ router.delete('/:id',
   checkPermission('ai-prompts', 'delete'),
   async (req, res, next) => {
     try {
-      const { Tenant } = require('../../database/models');
       const tenant = await Tenant.findOne({ where: { tenant_id: req.params.tenantId } });
       
       if (!tenant) {

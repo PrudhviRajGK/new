@@ -25,6 +25,8 @@ export default function Leads() {
     },
   });
 
+  // Backend returns { leads, pagination }, support both formats
+
   const createLeadMutation = useMutation({
     mutationFn: async (data: CreateLeadInput) => {
       const response = await api.post('/leads', data);
@@ -50,7 +52,7 @@ export default function Leads() {
     createLeadMutation.mutate(formData);
   };
 
-  const leads = response?.items || response || [];
+  const leads = response?.leads ?? response?.items ?? (Array.isArray(response) ? response : []);
 
   if (isLoading) {
     return <div className="text-center py-12">Loading leads...</div>;

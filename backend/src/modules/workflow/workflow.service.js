@@ -1,13 +1,20 @@
-const { Workflow, WorkflowExecution, Lead } = require('../../database/models');
+const { Workflow, WorkflowExecution, Lead, Tenant } = require('../../database/models');
 const { AppError } = require('../../shared/middleware/error-handler');
 const whatsappService = require('../whatsapp/whatsapp.service');
 const webhookService = require('../webhook/webhook.service');
 const logger = require('../../shared/utils/logger');
 
 class WorkflowService {
+  async _getTenantUuid(tenantId) {
+    const tenant = await Tenant.findOne({ where: { tenant_id: tenantId } });
+    if (!tenant) throw new AppError('Tenant not found', 404);
+    return tenant.id;
+  }
+
   async createWorkflow(tenantId, data) {
+    const tenantUuid = await this._getTenantUuid(tenantId);
     const workflow = await Workflow.create({
-      tenant_id: tenantId,
+      tenant_id: tenantUuid,
       name: data.name,
       description: data.description,
       trigger_type: data.triggerType,
@@ -23,7 +30,8 @@ class WorkflowService {
   }
 
   async getWorkflows(tenantId, filters = {}) {
-    const where = { tenant_id: tenantId };
+    const tenantUuid = await this._getTenantUuid(tenantId);
+    const where = { tenant_id: tenantUuid };
     if (filters.status) where.status = filters.status;
     if (filters.triggerType) where.trigger_type = filters.triggerType;
 
@@ -31,8 +39,9 @@ class WorkflowService {
   }
 
   async getWorkflowById(tenantId, workflowId) {
+    const tenantUuid = await this._getTenantUuid(tenantId);
     const workflow = await Workflow.findOne({
-      where: { id: workflowId, tenant_id: tenantId }
+      where: { id: workflowId, tenant_id: tenantUuid }
     });
 
     if (!workflow) {
@@ -83,10 +92,12 @@ class WorkflowService {
         return execution;
       }
 
-      // Execute actions
+      // Execute actions - get tenant_id string for external services (whatsapp, webhook)
+      const tenant = await Tenant.findByPk(workflow.tenant_id);
+      const tenantIdStr = tenant?.tenant_id;
       const results = [];
       for (const action of workflow.actions) {
-        const result = await this.executeAction(action, triggerData, workflow.tenant_id);
+        const result = await this.executeAction(action, triggerData, tenantIdStr);
         results.push(result);
         execution.execution_log.push({
           action: action.type,
@@ -222,9 +233,10 @@ class WorkflowService {
   }
 
   async triggerWorkflowsByEvent(tenantId, triggerType, data) {
+    const tenantUuid = await this._getTenantUuid(tenantId);
     const workflows = await Workflow.findAll({
       where: {
-        tenant_id: tenantId,
+        tenant_id: tenantUuid,
         trigger_type: triggerType,
         status: 'active'
       },

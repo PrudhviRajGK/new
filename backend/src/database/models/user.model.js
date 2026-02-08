@@ -64,7 +64,8 @@ module.exports = (sequelize, DataTypes) => {
         conversations: { view: true, reply: true },
         workflows: { view: true, create: false, edit: false, delete: false },
         analytics: { view: true },
-        settings: { view: false, edit: false }
+        settings: { view: false, edit: false },
+        'ai-prompts': { view: true, create: false, update: false, delete: false }
       }
     },
     metadata: {

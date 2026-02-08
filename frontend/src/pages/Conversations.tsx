@@ -9,13 +9,16 @@ export default function Conversations() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
 
-  const { data: conversations, isLoading } = useQuery({
+  const { data: response, isLoading } = useQuery({
     queryKey: ['conversations'],
     queryFn: async () => {
-      const response = await api.get('/conversations');
-      return response.data.data as Conversation[];
+      const res = await api.get('/conversations');
+      return res.data.data;
     },
   });
+
+  // Backend returns array directly
+  const conversations = Array.isArray(response) ? response : (response?.items ?? []);
 
   const filteredConversations = conversations?.filter((conv) =>
     conv.whatsapp_number.toLowerCase().includes(searchTerm.toLowerCase())

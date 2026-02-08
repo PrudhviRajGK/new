@@ -95,7 +95,7 @@ export default function ConversationView() {
         {messages && messages.length > 0 ? (
           messages.map((msg) => (
             <div
-              key={msg.id}
+              key={msg.id ?? msg.message_id ?? msg.timestamp}
               className={`flex ${msg.direction === 'outbound' ? 'justify-end' : 'justify-start'}`}
             >
               <div

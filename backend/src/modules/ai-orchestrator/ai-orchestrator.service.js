@@ -1,5 +1,5 @@
 const OpenAI = require('openai');
-const { AIPrompt, Lead } = require('../../database/models');
+const { AIPrompt, Lead, Tenant } = require('../../database/models');
 const AIDecisionLog = require('../../database/schemas/ai-decision-log.schema');
 const Conversation = require('../../database/schemas/conversation.schema');
 const { AppError } = require('../../shared/middleware/error-handler');
@@ -299,10 +299,19 @@ class AIOrchestratorService {
     }
   }
 
+  async _getTenantUuid(tenantId) {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (uuidRegex.test(tenantId)) return tenantId;
+    const tenant = await Tenant.findOne({ where: { tenant_id: tenantId } });
+    if (!tenant) throw new Error('Tenant not found');
+    return tenant.id;
+  }
+
   async getPrompt(tenantId, type, language = 'en') {
+    const tenantUuid = await this._getTenantUuid(tenantId);
     let prompt = await AIPrompt.findOne({
       where: {
-        tenant_id: tenantId,
+        tenant_id: tenantUuid,
         type,
         language,
         is_active: true

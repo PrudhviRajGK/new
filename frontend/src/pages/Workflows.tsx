@@ -14,17 +14,23 @@ export default function Workflows() {
     trigger_type: 'message_received',
   });
 
-  const { data: workflows, isLoading } = useQuery({
+  const { data: response, isLoading } = useQuery({
     queryKey: ['workflows'],
     queryFn: async () => {
-      const response = await api.get('/workflows');
-      return response.data.data as Workflow[];
+      const res = await api.get('/workflows');
+      return res.data.data;
     },
   });
 
+  // Backend returns array directly
+  const workflows = Array.isArray(response) ? response : (response?.items ?? []);
+
   const createWorkflowMutation = useMutation({
     mutationFn: async (data: CreateWorkflowInput) => {
-      const response = await api.post('/workflows', data);
+      const response = await api.post('/workflows', {
+        ...data,
+        triggerType: data.trigger_type,
+      });
       return response.data;
     },
     onSuccess: () => {

@@ -232,26 +232,36 @@ export default function LeadDetail() {
             </div>
           </div>
 
-          {/* BANT Scores */}
-          {lead.bant && (
+          {/* BANT Scores - backend returns { budget: { value, confidence }, ... } */}
+          {lead.bant && typeof lead.bant === 'object' && (
             <div className="bg-white shadow rounded-lg p-6">
               <h2 className="text-lg font-medium text-gray-900 mb-4">BANT Analysis</h2>
               
               <div className="space-y-3">
-                {Object.entries(lead.bant).map(([key, value]) => (
-                  <div key={key}>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm text-gray-600 capitalize">{key}</span>
-                      <span className="text-sm font-medium">{value}/10</span>
+                {Object.entries(lead.bant).map(([key, val]) => {
+                  const value = typeof val === 'object' && val !== null && 'value' in val
+                    ? (val as { value?: number }).value
+                    : val;
+                  const numVal = typeof value === 'number' ? value : 0;
+                  return (
+                    <div key={key}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm text-gray-600 capitalize">{key}</span>
+                        <span className="text-sm font-medium">
+                          {typeof value === 'string' ? value : `${numVal}/10`}
+                        </span>
+                      </div>
+                      {typeof value === 'number' && (
+                        <div className="w-full bg-gray-200 rounded-full h-1.5">
+                          <div
+                            className="bg-green-600 h-1.5 rounded-full"
+                            style={{ width: `${(numVal / 10) * 100}%` }}
+                          />
+                        </div>
+                      )}
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-1.5">
-                      <div
-                        className="bg-green-600 h-1.5 rounded-full"
-                        style={{ width: `${(value / 10) * 100}%` }}
-                      />
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
@@ -272,7 +282,7 @@ export default function LeadDetail() {
               {messages && messages.length > 0 ? (
                 messages.map((msg) => (
                   <div
-                    key={msg.id}
+                    key={msg.id ?? msg.message_id ?? msg.timestamp}
                     className={`flex ${msg.direction === 'outbound' ? 'justify-end' : 'justify-start'}`}
                   >
                     <div

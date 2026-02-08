@@ -1,4 +1,4 @@
-const { Lead, LeadStage, User } = require('../../database/models');
+const { Lead, LeadStage, User, Tenant, sequelize } = require('../../database/models');
 const { AppError } = require('../../shared/middleware/error-handler');
 const whatsappService = require('../whatsapp/whatsapp.service');
 const aiOrchestrator = require('../ai-orchestrator/ai-orchestrator.service');
@@ -6,11 +6,19 @@ const logger = require('../../shared/utils/logger');
 const { Op } = require('sequelize');
 
 class LeadService {
+  async _getTenantUuid(tenantId) {
+    const tenant = await Tenant.findOne({ where: { tenant_id: tenantId } });
+    if (!tenant) throw new AppError('Tenant not found', 404);
+    return tenant.id;
+  }
+
   async createLead(tenantId, data) {
     try {
+      const tenantUuid = await this._getTenantUuid(tenantId);
+
       // Check if lead already exists
       const existing = await Lead.findOne({
-        where: { tenant_id: tenantId, whatsapp_number: data.whatsappNumber }
+        where: { tenant_id: tenantUuid, whatsapp_number: data.whatsappNumber }
       });
 
       if (existing) {
@@ -19,11 +27,11 @@ class LeadService {
 
       // Get default stage
       const defaultStage = await LeadStage.findOne({
-        where: { tenant_id: tenantId, is_default: true }
+        where: { tenant_id: tenantUuid, is_default: true }
       });
 
       const lead = await Lead.create({
-        tenant_id: tenantId,
+        tenant_id: tenantUuid,
         whatsapp_number: data.whatsappNumber,
         name: data.name,
         email: data.email,
@@ -55,10 +63,11 @@ class LeadService {
   }
 
   async getLeads(tenantId, filters = {}, pagination = {}) {
+    const tenantUuid = await this._getTenantUuid(tenantId);
     const { page = 1, limit = 50, sortBy = 'created_at', sortOrder = 'DESC' } = pagination;
     const offset = (page - 1) * limit;
 
-    const where = { tenant_id: tenantId };
+    const where = { tenant_id: tenantUuid };
 
     if (filters.status) where.status = filters.status;
     if (filters.stageId) where.stage_id = filters.stageId;
@@ -97,8 +106,9 @@ class LeadService {
   }
 
   async getLeadById(tenantId, leadId) {
+    const tenantUuid = await this._getTenantUuid(tenantId);
     const lead = await Lead.findOne({
-      where: { id: leadId, tenant_id: tenantId },
+      where: { id: leadId, tenant_id: tenantUuid },
       include: [
         { model: LeadStage, as: 'stage' },
         { model: User, as: 'assignedUser', attributes: ['id', 'first_name', 'last_name', 'email'] }
@@ -114,6 +124,7 @@ class LeadService {
 
   async updateLead(tenantId, leadId, data) {
     const lead = await this.getLeadById(tenantId, leadId);
+    const tenantUuid = await this._getTenantUuid(tenantId);
 
     const updateData = {};
     if (data.name) updateData.name = data.name;
@@ -127,10 +138,11 @@ class LeadService {
 
     await lead.update(updateData);
 
-    // Update WhatsApp contact attributes
+    // Update WhatsApp contact attributes (tenantId string for API lookup)
     if (data.name || data.email || data.company) {
       try {
-        await whatsappService.updateContactAttributes(tenantId, lead.whatsapp_number, {
+        const tenant = await Tenant.findOne({ where: { id: tenantUuid } });
+        await whatsappService.updateContactAttributes(tenant?.tenant_id || tenantId, lead.whatsapp_number, {
           name: data.name || lead.name,
           email: data.email || lead.email,
           company: data.company || lead.company
@@ -146,9 +158,10 @@ class LeadService {
 
   async assignLead(tenantId, leadId, userId) {
     const lead = await this.getLeadById(tenantId, leadId);
+    const tenantUuid = await this._getTenantUuid(tenantId);
     
     const user = await User.findOne({
-      where: { id: userId, tenant_id: tenantId }
+      where: { id: userId, tenant_id: tenantUuid }
     });
 
     if (!user) {
@@ -181,9 +194,10 @@ class LeadService {
 
   async updateLeadStage(tenantId, leadId, stageId) {
     const lead = await this.getLeadById(tenantId, leadId);
+    const tenantUuid = await this._getTenantUuid(tenantId);
     
     const stage = await LeadStage.findOne({
-      where: { id: stageId, tenant_id: tenantId }
+      where: { id: stageId, tenant_id: tenantUuid }
     });
 
     if (!stage) {
@@ -205,13 +219,14 @@ class LeadService {
   }
 
   async getLeadStats(tenantId) {
-    const total = await Lead.count({ where: { tenant_id: tenantId } });
-    const newLeads = await Lead.count({ where: { tenant_id: tenantId, status: 'new' } });
-    const qualified = await Lead.count({ where: { tenant_id: tenantId, qualification_status: 'qualified' } });
-    const converted = await Lead.count({ where: { tenant_id: tenantId, status: 'converted' } });
+    const tenantUuid = await this._getTenantUuid(tenantId);
+    const total = await Lead.count({ where: { tenant_id: tenantUuid } });
+    const newLeads = await Lead.count({ where: { tenant_id: tenantUuid, status: 'new' } });
+    const qualified = await Lead.count({ where: { tenant_id: tenantUuid, qualification_status: 'qualified' } });
+    const converted = await Lead.count({ where: { tenant_id: tenantUuid, status: 'converted' } });
 
     const avgScore = await Lead.findOne({
-      where: { tenant_id: tenantId },
+      where: { tenant_id: tenantUuid },
       attributes: [[sequelize.fn('AVG', sequelize.col('lead_score')), 'avgScore']]
     });
 

@@ -6,8 +6,10 @@ import toast from 'react-hot-toast';
 
 interface AIPrompt {
   id: string;
-  prompt_type: string;
-  prompt_text: string;
+  type?: string;
+  prompt_type?: string;
+  prompt_template?: string;
+  prompt_text?: string;
   context?: string;
   is_active: boolean;
 }
@@ -20,13 +22,16 @@ export default function KnowledgeBase() {
   const [newPromptText, setNewPromptText] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
 
-  const { data: prompts, isLoading } = useQuery({
+  const { data: response, isLoading } = useQuery({
     queryKey: ['ai-prompts'],
     queryFn: async () => {
-      const response = await api.get('/ai-prompts');
-      return response.data.data as AIPrompt[];
+      const res = await api.get('/ai-prompts');
+      return res.data.data;
     },
   });
+
+  // Backend returns array, map prompt_template -> prompt_text for display
+  const prompts = (Array.isArray(response) ? response : []) as AIPrompt[];
 
   const updatePromptMutation = useMutation({
     mutationFn: async ({ id, prompt_text }: { id: string; prompt_text: string }) => {
@@ -85,7 +90,7 @@ export default function KnowledgeBase() {
 
   const handleEdit = (prompt: AIPrompt) => {
     setEditingPrompt(prompt.id);
-    setEditText(prompt.prompt_text);
+    setEditText(prompt.prompt_text ?? prompt.prompt_template ?? '');
   };
 
   const handleSave = (id: string) => {
@@ -200,8 +205,8 @@ export default function KnowledgeBase() {
                 <div className="flex-1">
                   <div className="flex items-center space-x-3 mb-2">
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                      {promptTypes.find((t) => t.value === prompt.prompt_type)?.label ||
-                        prompt.prompt_type}
+                      {promptTypes.find((t) => t.value === (prompt.prompt_type ?? prompt.type))?.label ||
+                        (prompt.prompt_type ?? prompt.type)}
                     </span>
                     <label className="flex items-center cursor-pointer">
                       <input
@@ -226,7 +231,7 @@ export default function KnowledgeBase() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   ) : (
-                    <p className="text-gray-700 whitespace-pre-wrap">{prompt.prompt_text}</p>
+                    <p className="text-gray-700 whitespace-pre-wrap">{prompt.prompt_text ?? prompt.prompt_template}</p>
                   )}
                 </div>
                 <div className="flex items-center space-x-2 ml-4">

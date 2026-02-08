@@ -47,8 +47,21 @@ async function seed() {
           conversations: { view: true, reply: true },
           workflows: { view: true, create: true, edit: true, delete: true },
           analytics: { view: true },
-          settings: { view: true, edit: true }
+          settings: { view: true, edit: true },
+          'ai-prompts': { view: true, create: true, update: true, delete: true }
         }
+      }
+    });
+
+    // Ensure admin has ai-prompts permissions (for existing users)
+    await admin.update({
+      permissions: {
+        leads: { view: true, create: true, edit: true, delete: true },
+        conversations: { view: true, reply: true },
+        workflows: { view: true, create: true, edit: true, delete: true },
+        analytics: { view: true },
+        settings: { view: true, edit: true },
+        'ai-prompts': { view: true, create: true, update: true, delete: true }
       }
     });
     logger.info('Admin user created');
